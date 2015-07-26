@@ -27,6 +27,7 @@ unsigned char nonce[24] = {
 ,0x82,0x19,0xe0,0x03,0x6b,0x7a,0x0b,0x37
 } ;
 unsigned char* readwholefile(char* filename);
+int fileno(FILE*);
 
 void randombytes(unsigned char buffer[], unsigned long long size)
 {
@@ -146,8 +147,7 @@ unsigned char* readwholefile(char* filename) {
 int main(int argc, char **argv)
 {
     unsigned char c[MAX_MSG_SIZE];
-    int r;
-    int count, i;
+    int count;
     unsigned char *plain;
     size_t plain_len;
 
