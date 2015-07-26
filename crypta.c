@@ -72,7 +72,7 @@ int is_zero( const unsigned char *data, int len )
 	return rc;
 }
 
-#define MAX_MSG_SIZE 102400
+#define MAX_MSG_SIZE 10485760
 
 int encrypt(unsigned char encrypted[], const unsigned char pk[],
 		const unsigned char sk[], const unsigned char nonce[],
