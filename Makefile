@@ -3,10 +3,13 @@ ARCHSUFFIX?=-$(shell uname -m)
 
 all: crypta$(ARCHSUFFIX)
 
-crypta.o: crypta.c
+%.o: %.c
 	$(CC) $(CFLAGS) -Wextra $^ -c -o $@
 
-crypta$(ARCHSUFFIX): crypta.o tweetnacl.o
+tweetnacl.o: tweetnacl.c
+	$(CC) $(CFLAGS) $^ -c -o $@
+
+crypta$(ARCHSUFFIX): crypta.o tweetnacl.o fileutils.o
 	$(CC) $(CFLAGS) -Wextra $^ -o $@
 
 clean:

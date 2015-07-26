@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stddef.h>
 #include <string.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
+#include "fileutils.h"
 #include "tweetnacl.h"
 
 unsigned char sk[32] = {
@@ -26,24 +25,8 @@ unsigned char nonce[24] = {
 ,0xcd,0x62,0xbd,0xa8,0x75,0xfc,0x73,0xd6
 ,0x82,0x19,0xe0,0x03,0x6b,0x7a,0x0b,0x37
 } ;
-long readwholefile(char* filename, unsigned char**);
 int fileno(FILE*);
 
-void randombytes(unsigned char buffer[], unsigned long long size)
-{
-	int fd;
-
-	fd = open( "/dev/urandom", O_RDONLY );
-	if( fd < 0 ) {
-		fprintf( stderr, "Failed to open /dev/urandom\n" );
-		exit(1);
-	}
-
-	int rc;
-	if( (rc = read( fd, buffer, size )) >= 0 ) {
-		close( fd );
-	}
-}
 
 int is_zero( const unsigned char *data, int len )
 {
@@ -106,33 +89,6 @@ void usage(char* progname) {
 	printf("If COUNT > 0, %s will run in benchmark mode: only benchmark results will be printed\n", progname);
 }
 
-long readwholefile(char* filename, unsigned char **buf) {
-	unsigned char *content;
-	long fsize;
-	FILE *f = fopen(filename, "rb");
-	if(f == NULL) {
-		fprintf(stderr, "Failure reading '%s' (non existent file?)\n",
-				filename);
-		return -1;
-	}
-	fseek(f, 0, SEEK_END);
-	fsize = ftell(f);
-	fseek(f, 0, SEEK_SET);
-
-	content = malloc(fsize + 1);
-	if(content == NULL) {
-		fprintf(stderr, "Failure reading '%s' (not enough memory?)\n",
-				filename);
-		return -2;
-	}
-	fread(content, fsize, sizeof(char), f);
-	fclose(f);
-
-	content[fsize] = 0;
-	*buf = content;
-	return fsize;
-}
-
 int main(int argc, char **argv)
 {
     unsigned char *c;
@@ -150,7 +106,7 @@ int main(int argc, char **argv)
 	    return 2;
     }
     sscanf(argv[1], "%d", &count);
-    plain_len = readwholefile(argv[2], &plain);
+    plain_len = file_readwhole(argv[2], &plain);
     if(plain_len < 0 || !plain) {
 	    if(plain) {
 		    free(plain);
