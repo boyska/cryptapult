@@ -1,0 +1,3 @@
+*.o
+crypta-*
+.*.sw[po]
