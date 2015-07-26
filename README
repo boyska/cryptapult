@@ -1,0 +1,4 @@
+By now, it uses tweetnacl: just download it from its website.
+
+Migration to libsodium is a future goal, making it possible to use
+niceness such as crypto_box_seal.

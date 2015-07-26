@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
@@ -152,7 +151,6 @@ int main(int ac, char **av)
     unsigned char *plain;
     size_t plain_len;
 
-    time_t starttime;
 
     if(ac != 3) {
 	    usage(av[0]);
@@ -167,11 +165,19 @@ int main(int ac, char **av)
 
     memset(c, '\0', MAX_MSG_SIZE);
     if(count == 0) {
-	    r = encrypt(c, pk, sk, nonce, plain, plain_len);
-	    fwrite(c, r, sizeof *c, stdout);
+	    if(isatty(fileno(stdout))) {
+		    fprintf(stderr, "Output is a tty, refusing to write\n");
+		    return 10;
+	    }
+	    const int r = encrypt(c, pk, sk, nonce, plain, plain_len);
+	    if(r < 0) {
+		    fprintf(stderr, "Error %d occured\n", r);
+		    return 1;
+	    }
+	    fwrite(c, sizeof(unsigned char), r, stdout);
     } else {
-	    starttime = time(NULL);
-	    for(i=0; i < count; i++) {
+	    const time_t starttime = time(NULL);
+	    for(int i=0; i < count; i++) {
 		    encrypt(c, pk, sk, nonce, plain, plain_len);
 	    }
 	    fprintf(stderr, "Time per cycle: %.3f\n",

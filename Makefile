@@ -1,4 +1,4 @@
-CFLAGS=-std=c11 -Wall -pedantic
+CFLAGS:=-std=c11 -Wall -pedantic $(CFLAGS)
 ARCHSUFFIX?=-$(shell uname -m)
 
 all: crypta$(ARCHSUFFIX)
