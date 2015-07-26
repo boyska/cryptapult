@@ -143,7 +143,7 @@ unsigned char* readwholefile(char* filename) {
 	return content;
 }
 
-int main(int ac, char **av)
+int main(int argc, char **argv)
 {
     unsigned char c[MAX_MSG_SIZE];
     int r;
@@ -152,12 +152,16 @@ int main(int ac, char **av)
     size_t plain_len;
 
 
-    if(ac != 3) {
-	    usage(av[0]);
+    if(argc != 3) {
+	    usage(argv[0]);
 	    return 2;
     }
-    sscanf(av[1], "%d", &count);
-    plain = readwholefile(av[2]);
+    if(!sscanf(argv[1], "%d", &count)) {
+	    usage(argv[0]);
+	    return 2;
+    }
+    sscanf(argv[1], "%d", &count);
+    plain = readwholefile(argv[2]);
     if(!plain) {
 	    return 1;
     }
@@ -167,6 +171,7 @@ int main(int ac, char **av)
     if(count == 0) {
 	    if(isatty(fileno(stdout))) {
 		    fprintf(stderr, "Output is a tty, refusing to write\n");
+		    free(plain);
 		    return 10;
 	    }
 	    const int r = encrypt(c, pk, sk, nonce, plain, plain_len);
