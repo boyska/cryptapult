@@ -5,6 +5,7 @@
 #include <time.h>
 #include <argp.h>
 #include "fileutils.h"
+#include "cryptutils.h"
 #include "tweetnacl.h"
 
 unsigned char sk[32] = {
@@ -29,60 +30,7 @@ unsigned char nonce[24] = {
 int fileno(FILE*);
 
 
-int is_zero( const unsigned char *data, int len )
-{
-	int i;
-	int rc;
 
-	rc = 0;
-	for(i = 0; i < len; ++i) {
-		rc |= data[i];
-	}
-
-	return rc;
-}
-
-int encrypt(unsigned char encrypted[],
-		const unsigned char precomputation[],
-		const unsigned char nonce[],
-		const unsigned char plain[], int length) {
-	
-	unsigned char *temp_plain = malloc(length + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES + 1);
-	if(!temp_plain) {
-		return -2;
-	}
-	memset(temp_plain, '\0', crypto_box_ZEROBYTES);
-	memcpy(temp_plain + crypto_box_ZEROBYTES, plain, length);
-
-	unsigned char *temp_encrypted = malloc(length + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES + 1);
-	if(!temp_encrypted) {
-		return -2;
-	}
-	int rc;
-
-	rc = crypto_box_afternm(temp_encrypted, temp_plain,
-			crypto_box_ZEROBYTES + length, nonce,
-			precomputation);
-
-	if( rc != 0 ) {
-		free(temp_plain);
-		free(temp_encrypted);
-		return -1;
-	}
-
-	if( is_zero(temp_plain, crypto_box_BOXZEROBYTES) != 0 ) {
-		free(temp_plain);
-		free(temp_encrypted);
-		return -3;
-	}
-
-	free(temp_plain);
-
-	memcpy(encrypted, temp_encrypted + crypto_box_BOXZEROBYTES, crypto_box_ZEROBYTES + length);
-	free(temp_encrypted);
-
-	return crypto_box_ZEROBYTES + length - crypto_box_BOXZEROBYTES;
-}
 
 
 void usage(char* progname) {
@@ -91,7 +39,7 @@ void usage(char* progname) {
 }
 
 struct parameters {
-	short int benchmark;
+	short int benchmark, check_tty;
 	int benchmark_count;
 	char *filename;
 };
@@ -105,6 +53,14 @@ error_t parse_opt(int key, char* arg, struct argp_state *state) {
 				argp_failure(state, 2, 0,
 					"'%s' is not a valid integer", arg);
 			}
+			if(opts->benchmark_count < 1) {
+				argp_failure(state, 2, 0,
+					"-b must be >= 1, got %d instead",
+					opts->benchmark_count);
+			}
+			break;
+		case 200:
+			opts->check_tty = 0;
 			break;
 		case ARGP_KEY_ARG:
 			if(state->arg_num > 1)
@@ -129,10 +85,13 @@ int main(int argc, char **argv)
     struct parameters params;
     params.benchmark = 0;
     params.benchmark_count = 1;
+    params.check_tty = 1;
 
     struct argp_option options[] = {
 	    {"bench", 'b', "COUNT", 0,
 		    "Run encryption COUNT times and output benchmarks", 0},
+	    {"ignore-tty", 200, 0, 0,
+		    "Output encrypted text even on tty", 0},
 	    {0}
     };
     struct argp argp = {options, parse_opt, "FILENAME",
@@ -159,7 +118,7 @@ int main(int argc, char **argv)
 			    (time(NULL) - starttime));
     }
     if(!params.benchmark) {
-	    if(isatty(fileno(stdout))) {
+	    if(params.check_tty && isatty(fileno(stdout))) {
 		    fprintf(stderr, "Output is a tty, refusing to write\n");
 		    free(plain);
 		    return 10;
