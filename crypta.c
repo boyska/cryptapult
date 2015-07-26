@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <argp.h>
 #include "fileutils.h"
 #include "tweetnacl.h"
 
@@ -89,24 +90,57 @@ void usage(char* progname) {
 	printf("If COUNT > 0, %s will run in benchmark mode: only benchmark results will be printed\n", progname);
 }
 
+struct parameters {
+	short int benchmark;
+	int benchmark_count;
+	char *filename;
+};
+
+error_t parse_opt(int key, char* arg, struct argp_state *state) {
+	struct parameters *opts = state->input;
+	switch(key) {
+		case 'b':
+			opts->benchmark = 1;
+			if(!sscanf(arg, "%d", &opts->benchmark_count)) {
+				argp_failure(state, 2, 0,
+					"'%s' is not a valid integer", arg);
+			}
+			break;
+		case ARGP_KEY_ARG:
+			if(state->arg_num > 1)
+				argp_usage(state);
+			opts->filename = arg;
+			break;
+		case ARGP_KEY_END:
+			if(state->arg_num < 1)
+				argp_usage(state);
+			break;
+		default:
+			return ARGP_ERR_UNKNOWN;
+	}
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
     unsigned char *c;
-    int count;
     unsigned char *plain = NULL;
     long plain_len;
+    struct parameters params;
+    params.benchmark = 0;
+    params.benchmark_count = 1;
 
+    struct argp_option options[] = {
+	    {"bench", 'b', "COUNT", 0,
+		    "Run encryption COUNT times and output benchmarks", 0},
+	    {0}
+    };
+    struct argp argp = {options, parse_opt, "FILENAME",
+	    "Encrypt file asymmetrically with the power of NaCl",
+	    NULL, NULL, NULL};
+    argp_parse(&argp, argc, argv, 0, 0, &params);
 
-    if(argc != 3) {
-	    usage(argv[0]);
-	    return 2;
-    }
-    if(!sscanf(argv[1], "%d", &count)) {
-	    usage(argv[0]);
-	    return 2;
-    }
-    sscanf(argv[1], "%d", &count);
-    plain_len = file_readwhole(argv[2], &plain);
+    plain_len = file_readwhole(params.filename, &plain);
     if(plain_len < 0 || !plain) {
 	    if(plain) {
 		    free(plain);
@@ -120,11 +154,11 @@ int main(int argc, char **argv)
     unsigned char precomputation[crypto_box_BEFORENMBYTES];
     time_t starttime = time(NULL);
     crypto_box_beforenm(precomputation, pk, sk);
-    if(count > 0) {
+    if(params.benchmark) {
 	    fprintf(stderr, "Time of precomputation: %ld\n",
 			    (time(NULL) - starttime));
     }
-    if(count == 0) {
+    if(!params.benchmark) {
 	    if(isatty(fileno(stdout))) {
 		    fprintf(stderr, "Output is a tty, refusing to write\n");
 		    free(plain);
@@ -138,11 +172,11 @@ int main(int argc, char **argv)
 	    fwrite(c, sizeof(unsigned char), r, stdout);
     } else {
 	    starttime = time(NULL);
-	    for(int i=0; i < count; i++) {
+	    for(int i=0; i < params.benchmark_count; i++) {
 		    encrypt(c, precomputation, nonce, plain, plain_len);
 	    }
 	    fprintf(stderr, "Time per cycle: %.3f\n",
-			    (double)(time(NULL) - starttime) / count);
+			    (double)(time(NULL) - starttime) / params.benchmark_count);
     }
     free(c);
     free(plain);
