@@ -58,8 +58,9 @@ int is_zero( const unsigned char *data, int len )
 	return rc;
 }
 
-int encrypt(unsigned char encrypted[], const unsigned char pk[],
-		const unsigned char sk[], const unsigned char nonce[],
+int encrypt(unsigned char encrypted[],
+		const unsigned char precomputation[],
+		const unsigned char nonce[],
 		const unsigned char plain[], int length) {
 	
 	unsigned char *temp_plain = malloc(length + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES + 1);
@@ -75,9 +76,9 @@ int encrypt(unsigned char encrypted[], const unsigned char pk[],
 	}
 	int rc;
 
-	rc = crypto_box(temp_encrypted, temp_plain,
+	rc = crypto_box_afternm(temp_encrypted, temp_plain,
 			crypto_box_ZEROBYTES + length, nonce,
-			pk, sk);
+			precomputation);
 
 	if( rc != 0 ) {
 		free(temp_plain);
@@ -112,7 +113,7 @@ long readwholefile(char* filename, unsigned char **buf) {
 	if(f == NULL) {
 		fprintf(stderr, "Failure reading '%s' (non existent file?)\n",
 				filename);
-		return NULL;
+		return -1;
 	}
 	fseek(f, 0, SEEK_END);
 	fsize = ftell(f);
@@ -122,7 +123,7 @@ long readwholefile(char* filename, unsigned char **buf) {
 	if(content == NULL) {
 		fprintf(stderr, "Failure reading '%s' (not enough memory?)\n",
 				filename);
-		return NULL;
+		return -2;
 	}
 	fread(content, fsize, sizeof(char), f);
 	fclose(f);
@@ -137,7 +138,7 @@ int main(int argc, char **argv)
     unsigned char *c;
     int count;
     unsigned char *plain = NULL;
-    size_t plain_len;
+    long plain_len;
 
 
     if(argc != 3) {
@@ -150,7 +151,7 @@ int main(int argc, char **argv)
     }
     sscanf(argv[1], "%d", &count);
     plain_len = readwholefile(argv[2], &plain);
-    if(!plain_len || !plain) {
+    if(plain_len < 0 || !plain) {
 	    if(plain) {
 		    free(plain);
 	    }
@@ -160,22 +161,29 @@ int main(int argc, char **argv)
 
     c = malloc(plain_len + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES + 1);
     memset(c, '\0', plain_len);
+    unsigned char precomputation[crypto_box_BEFORENMBYTES];
+    time_t starttime = time(NULL);
+    crypto_box_beforenm(precomputation, pk, sk);
+    if(count > 0) {
+	    fprintf(stderr, "Time of precomputation: %ld\n",
+			    (time(NULL) - starttime));
+    }
     if(count == 0) {
 	    if(isatty(fileno(stdout))) {
 		    fprintf(stderr, "Output is a tty, refusing to write\n");
 		    free(plain);
 		    return 10;
 	    }
-	    const int r = encrypt(c, pk, sk, nonce, plain, plain_len);
+	    const int r = encrypt(c, precomputation, nonce, plain, plain_len);
 	    if(r < 0) {
 		    fprintf(stderr, "Error %d occured\n", r);
 		    return 1;
 	    }
 	    fwrite(c, sizeof(unsigned char), r, stdout);
     } else {
-	    const time_t starttime = time(NULL);
+	    starttime = time(NULL);
 	    for(int i=0; i < count; i++) {
-		    encrypt(c, pk, sk, nonce, plain, plain_len);
+		    encrypt(c, precomputation, nonce, plain, plain_len);
 	    }
 	    fprintf(stderr, "Time per cycle: %.3f\n",
 			    (double)(time(NULL) - starttime) / count);
