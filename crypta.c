@@ -26,12 +26,11 @@ unsigned char nonce[24] = {
 ,0xcd,0x62,0xbd,0xa8,0x75,0xfc,0x73,0xd6
 ,0x82,0x19,0xe0,0x03,0x6b,0x7a,0x0b,0x37
 } ;
-unsigned char* readwholefile(char* filename);
+long readwholefile(char* filename, unsigned char**);
 int fileno(FILE*);
 
 void randombytes(unsigned char buffer[], unsigned long long size)
 {
-	
 	int fd;
 
 	fd = open( "/dev/urandom", O_RDONLY );
@@ -118,7 +117,7 @@ void usage(char* progname) {
 	printf("If COUNT > 0, %s will run in benchmark mode: only benchmark results will be printed\n", progname);
 }
 
-unsigned char* readwholefile(char* filename) {
+long readwholefile(char* filename, unsigned char **buf) {
 	unsigned char *content;
 	long fsize;
 	FILE *f = fopen(filename, "rb");
@@ -141,7 +140,8 @@ unsigned char* readwholefile(char* filename) {
 	fclose(f);
 
 	content[fsize] = 0;
-	return content;
+	*buf = content;
+	return fsize;
 }
 
 int main(int argc, char **argv)
@@ -161,11 +161,10 @@ int main(int argc, char **argv)
 	    return 2;
     }
     sscanf(argv[1], "%d", &count);
-    plain = readwholefile(argv[2]);
-    if(!plain) {
+    plain_len = readwholefile(argv[2], &plain);
+    if(!plain_len || !plain) {
 	    return 1;
     }
-    plain_len = strlen((char*)plain);
 
     memset(c, '\0', MAX_MSG_SIZE);
     if(count == 0) {
