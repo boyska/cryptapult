@@ -72,17 +72,27 @@ int is_zero( const unsigned char *data, int len )
 	return rc;
 }
 
-#define MAX_MSG_SIZE 1024000
+#define MAX_MSG_SIZE 10240000
 
 int encrypt(unsigned char encrypted[], const unsigned char pk[],
 		const unsigned char sk[], const unsigned char nonce[],
 		const unsigned char plain[], int length) {
 	
 	unsigned char *temp_plain = malloc(MAX_MSG_SIZE);
+	if(!temp_plain) {
+		return -2;
+	}
 	unsigned char *temp_encrypted = malloc(MAX_MSG_SIZE);
+	if(!temp_encrypted) {
+		return -2;
+	}
 	int rc;
 
 	if(length+crypto_box_ZEROBYTES >= MAX_MSG_SIZE) {
+		fprintf(stderr, "Status of badness:\n");
+		fprintf(stderr, " file is long %d\n", length);
+		fprintf(stderr, " zerobytes is %d\n", crypto_box_ZEROBYTES);
+		fprintf(stderr, " max is %d\n", MAX_MSG_SIZE);
 		return -2;
 	}
 
@@ -146,7 +156,7 @@ long readwholefile(char* filename, unsigned char **buf) {
 
 int main(int argc, char **argv)
 {
-    unsigned char c[MAX_MSG_SIZE];
+    unsigned char *c;
     int count;
     unsigned char *plain;
     size_t plain_len;
@@ -166,6 +176,7 @@ int main(int argc, char **argv)
 	    return 1;
     }
 
+    c = malloc(MAX_MSG_SIZE);
     memset(c, '\0', MAX_MSG_SIZE);
     if(count == 0) {
 	    if(isatty(fileno(stdout))) {
@@ -187,6 +198,7 @@ int main(int argc, char **argv)
 	    fprintf(stderr, "Time per cycle: %.3f\n",
 			    (double)(time(NULL) - starttime) / count);
     }
+    free(c);
     free(plain);
     return 0;
 }
