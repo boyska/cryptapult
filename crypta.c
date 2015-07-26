@@ -45,20 +45,6 @@ void randombytes(unsigned char buffer[], unsigned long long size)
 	}
 }
 
-char *to_hex( char hex[], const unsigned char bin[], size_t length )
-{
-	unsigned char *p0 = (unsigned char *)bin;
-	char *p1 = hex;
-
-	for(size_t i = 0; i < length; i++ ) {
-		sprintf( p1, "%02x", *p0 );
-		p0 += 1;
-		p1 += 2;
-	}
-
-	return hex;
-}
-
 int is_zero( const unsigned char *data, int len )
 {
 	int i;
