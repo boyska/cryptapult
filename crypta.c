@@ -72,34 +72,26 @@ int is_zero( const unsigned char *data, int len )
 	return rc;
 }
 
-#define MAX_MSG_SIZE 10240000
-
 int encrypt(unsigned char encrypted[], const unsigned char pk[],
 		const unsigned char sk[], const unsigned char nonce[],
 		const unsigned char plain[], int length) {
 	
-	unsigned char *temp_plain = malloc(MAX_MSG_SIZE);
+	unsigned char *temp_plain = malloc(length + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES + 1);
 	if(!temp_plain) {
 		return -2;
 	}
-	unsigned char *temp_encrypted = malloc(MAX_MSG_SIZE);
+	memset(temp_plain, '\0', crypto_box_ZEROBYTES);
+	memcpy(temp_plain + crypto_box_ZEROBYTES, plain, length);
+
+	unsigned char *temp_encrypted = malloc(length + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES + 1);
 	if(!temp_encrypted) {
 		return -2;
 	}
 	int rc;
 
-	if(length+crypto_box_ZEROBYTES >= MAX_MSG_SIZE) {
-		fprintf(stderr, "Status of badness:\n");
-		fprintf(stderr, " file is long %d\n", length);
-		fprintf(stderr, " zerobytes is %d\n", crypto_box_ZEROBYTES);
-		fprintf(stderr, " max is %d\n", MAX_MSG_SIZE);
-		return -2;
-	}
-
-	memset(temp_plain, '\0', crypto_box_ZEROBYTES);
-	memcpy(temp_plain + crypto_box_ZEROBYTES, plain, length);
-
-	rc = crypto_box(temp_encrypted, temp_plain, crypto_box_ZEROBYTES + length, nonce, pk, sk);
+	rc = crypto_box(temp_encrypted, temp_plain,
+			crypto_box_ZEROBYTES + length, nonce,
+			pk, sk);
 
 	if( rc != 0 ) {
 		free(temp_plain);
@@ -158,7 +150,7 @@ int main(int argc, char **argv)
 {
     unsigned char *c;
     int count;
-    unsigned char *plain;
+    unsigned char *plain = NULL;
     size_t plain_len;
 
 
@@ -173,11 +165,15 @@ int main(int argc, char **argv)
     sscanf(argv[1], "%d", &count);
     plain_len = readwholefile(argv[2], &plain);
     if(!plain_len || !plain) {
+	    if(plain) {
+		    free(plain);
+	    }
+	    fprintf(stderr, "Error reading file\n");
 	    return 1;
     }
 
-    c = malloc(MAX_MSG_SIZE);
-    memset(c, '\0', MAX_MSG_SIZE);
+    c = malloc(plain_len + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES + 1);
+    memset(c, '\0', plain_len);
     if(count == 0) {
 	    if(isatty(fileno(stdout))) {
 		    fprintf(stderr, "Output is a tty, refusing to write\n");
