@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
-#include <argp.h>
+#include <getopt.h>
 #include "fileutils.h"
 #include "cryptutils.h"
 #include "tweetnacl.h"
@@ -44,35 +44,75 @@ struct parameters {
 	char *filename;
 };
 
-error_t parse_opt(int key, char* arg, struct argp_state *state) {
-	struct parameters *opts = state->input;
-	switch(key) {
-		case 'b':
-			opts->benchmark = 1;
-			if(!sscanf(arg, "%d", &opts->benchmark_count)) {
-				argp_failure(state, 2, 0,
-					"'%s' is not a valid integer", arg);
+void print_usage(FILE* stream, int exit_code, char* prog) {
+	fprintf(stream, "Usage: %s [options] FILENAME\n", prog);
+	fprintf(stream, "Options:\n");
+	fprintf(stream, "  -h, --help        Show this help\n");
+	fprintf(stream, "  --bench COUNT     Run the encryption COUNT times and\n"
+			        "                    print only benchmarks to stdout\n");
+	fprintf(stream, "  --ignore-tty      Output ciphertext even if stdout is a tty\n");
+	exit(exit_code);
+}
+
+int parse_opt(int argc, char** argv, struct parameters *opts) {
+	int option_index;
+	int c;
+	struct option long_options[] = {
+		{"help", no_argument, NULL, 'h'},
+		{"bench", required_argument, NULL, 0},
+		{"ignore-tty", no_argument, NULL, 0},
+		{NULL,0,NULL,0}
+	};
+	char *program_name = argv[0];
+	while(1) {
+		option_index = 0;
+		c = getopt_long(argc, argv, "h", long_options, &option_index);
+		if(c == -1)
+			break;
+
+		switch(c) {
+			case 'T':
+				opts->check_tty = 0;
+				break;
+			case 0: /* long option without a short arg */
+				if(strcmp("bench", long_options[option_index].name) == 0) {
+					opts->benchmark = 1;
+					if(!sscanf(optarg, "%d", &opts->benchmark_count)) {
+						fprintf(stderr, "'%s' is not a valid integer\n", optarg);
+						return 2;
+					}
+					if(opts->benchmark_count < 1) {
+						fprintf(stderr, "-b must be >= 1, got %d instead\n",
+								opts->benchmark_count);
+						return 2;
+					}
+				}
+				if(strcmp("ignore-tty", long_options[option_index].name) == 0) {
+					opts->check_tty = 0;
+				}
+				break;
+			case 'h':
+				print_usage(stdout, 0, program_name);
+				break;
+			case '?':
+				break;
+			default:
+				break;
+		}
+	}
+	if(argc - optind != 1) {
+		fprintf(stderr, "Wrong number of arguments\n");
+		return 2;
+	}
+	if(optind < argc) {
+		int argnumber = 0;
+		while(optind + argnumber < argc) {
+			switch(argnumber) {
+				case 0:
+					opts->filename = argv[optind + argnumber++];
+					break;
 			}
-			if(opts->benchmark_count < 1) {
-				argp_failure(state, 2, 0,
-					"-b must be >= 1, got %d instead",
-					opts->benchmark_count);
-			}
-			break;
-		case 200:
-			opts->check_tty = 0;
-			break;
-		case ARGP_KEY_ARG:
-			if(state->arg_num > 1)
-				argp_usage(state);
-			opts->filename = arg;
-			break;
-		case ARGP_KEY_END:
-			if(state->arg_num < 1)
-				argp_usage(state);
-			break;
-		default:
-			return ARGP_ERR_UNKNOWN;
+		}
 	}
 	return 0;
 }
@@ -87,17 +127,10 @@ int main(int argc, char **argv)
     params.benchmark_count = 1;
     params.check_tty = 1;
 
-    struct argp_option options[] = {
-	    {"bench", 'b', "COUNT", 0,
-		    "Run encryption COUNT times and output benchmarks", 0},
-	    {"ignore-tty", 200, 0, 0,
-		    "Output encrypted text even on tty", 0},
-	    {0}
-    };
-    struct argp argp = {options, parse_opt, "FILENAME",
-	    "Encrypt file asymmetrically with the power of NaCl",
-	    NULL, NULL, NULL};
-    argp_parse(&argp, argc, argv, 0, 0, &params);
+	int parse_ret = parse_opt(argc, argv, &params);
+	if(parse_ret) {
+		print_usage(stderr, parse_ret, argv[0]);
+	}
 
     plain_len = file_readwhole(params.filename, &plain);
     if(plain_len < 0 || !plain) {
