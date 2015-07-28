@@ -4,6 +4,8 @@ ARCHSUFFIX?=-$(shell uname -m)
 all: crypta$(ARCHSUFFIX)
 
 %.o: %.c
+	$(CC) $(CFLAGS) -Wextra $< -c -o $@
+
 crypta.o: crypta.c $(wildcard *.h)
 	$(CC) $(CFLAGS) -Wextra $< -c -o $@
 
