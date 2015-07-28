@@ -1,0 +1,14 @@
+What's this
+============
+
+A small program to perform *quick* asymmetric encryption, aimed at embedded
+devices. It relies on [nacl](http://nacl.cr.yp.to/) to do the hard stuff.
+
+Some attention is paid to keep compatibility with non-gnu toolchains.
+
+Compile
+=======
+By now, it uses tweetnacl: just download it from its website.
+
+Migration to libsodium is a future goal, making it possible to use
+niceness such as crypto_box_seal.
