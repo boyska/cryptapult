@@ -1,6 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
-#include "tweetnacl.h"
+#include <sodium.h>
 
 static int is_zero( const unsigned char *data, int len )
 {

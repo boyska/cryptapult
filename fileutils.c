@@ -3,22 +3,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-void randombytes(unsigned char buffer[], unsigned long long size)
-{
-	int fd;
-
-	fd = open( "/dev/urandom", O_RDONLY );
-	if( fd < 0 ) {
-		fprintf( stderr, "Failed to open /dev/urandom\n" );
-		exit(1);
-	}
-
-	int rc;
-	if( (rc = read( fd, buffer, size )) >= 0 ) {
-		close( fd );
-	}
-}
-
 long file_readwhole(char* filename, unsigned char **buf) {
 	unsigned char *content;
 	long fsize;

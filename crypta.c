@@ -6,7 +6,7 @@
 #include <getopt.h>
 #include "fileutils.h"
 #include "cryptutils.h"
-#include "tweetnacl.h"
+#include <sodium.h>
 
 unsigned char sk[32] = {
  0x77,0x07,0x6d,0x0a,0x73,0x18,0xa5,0x7d
@@ -119,6 +119,9 @@ int parse_opt(int argc, char** argv, struct parameters *opts) {
 
 int main(int argc, char **argv)
 {
+	if(sodium_init() == -1) {
+        return 11;
+    }
     unsigned char *c;
     unsigned char *plain = NULL;
     long plain_len;
