@@ -1,14 +1,22 @@
-What's this
-============
+cryptapult
+===========
 
-A small program to perform *quick* asymmetric encryption, aimed at embedded
-devices. It relies on [nacl](http://nacl.cr.yp.to/) to do the hard stuff.
+Goal
+----
 
-Some attention is paid to keep compatibility with non-gnu toolchains.
+This is aimed at KeyASIC hardware, so the final goal is having something that:
+* "observe" if you create a photo on your sd card
+* encrypts it in a separate partition (throwing it away like a catapult)
+* wipe the original
 
-Compile
-=======
-By now, it uses tweetnacl: just download it from its website.
+By now, there is only some code about encryption
 
-Migration to libsodium is a future goal, making it possible to use
-niceness such as crypto_box_seal.
+Implementation
+-----------------
+
+Of course the difficult part is the encryption: we use libsodium to do the hard
+stuff. 
+
+In development, attention is paid to:
+* compatibility with both glibc and uclibc
+* ability to create static binaries
