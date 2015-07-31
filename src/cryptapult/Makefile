@@ -1,4 +1,4 @@
-CFLAGS:=-std=c11 -Wall -Wextra -pedantic -O2 $(CFLAGS) $(MORECFLAGS)
+CFLAGS:=-std=c11 -I../libsodium/src/libsodium/include -Wall -Wextra -pedantic -O2 $(CFLAGS) $(MORECFLAGS)
 ARCHSUFFIX?=-$(shell uname -m)
 
 all: crypta$(ARCHSUFFIX)
@@ -11,7 +11,10 @@ crypta.o: crypta.c $(wildcard *.h)
 
 
 crypta$(ARCHSUFFIX): crypta.o fileutils.o cryptutils.o
-	$(CC) $(CFLAGS) $^ -o $@ -lsodium
+	$(CC) $(CFLAGS) -L ../libsodium/src/libsodium/.libs/ $^ -o $@ -lsodium
+
+bench-genkey: bench-genkey.o
+	$(CC) $(CFLAGS) -L ../libsodium/src/libsodium/.libs/ $^ -o $@ -lsodium
 
 clean:
 	rm -f *.o crypta crypta$(ARCHSUFFIX)
