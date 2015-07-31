@@ -138,16 +138,16 @@ int main(int argc, char **argv)
     plain_len = file_readwhole(params.filename, &plain);
     if(plain_len < 0 || !plain) {
 	    if(plain) {
-		    free(plain);
+		    sodium_free(plain);
 	    }
 	    fprintf(stderr, "Error reading file\n");
 	    return 1;
     }
 
-    c = calloc(plain_len + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES + 1,
+    c = calloc(plain_len + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES,
 		    sizeof(char));
     sodium_memzero(c, plain_len + crypto_box_ZEROBYTES +
-		    crypto_box_BOXZEROBYTES + 1);
+		    crypto_box_BOXZEROBYTES);
     unsigned char precomputation[crypto_box_BEFORENMBYTES];
     time_t starttime = time(NULL);
     crypto_box_beforenm(precomputation, pk, sk);
@@ -158,7 +158,8 @@ int main(int argc, char **argv)
     if(!params.benchmark) {
 	    if(params.check_tty && isatty(fileno(stdout))) {
 		    fprintf(stderr, "Output is a tty, refusing to write\n");
-		    free(plain);
+		    free(c);
+		    sodium_free(plain);
 		    return 10;
 	    }
 	    const int r = encrypt(c, precomputation, nonce, plain, plain_len);
