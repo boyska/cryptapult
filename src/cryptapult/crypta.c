@@ -144,8 +144,10 @@ int main(int argc, char **argv)
 	    return 1;
     }
 
-    c = malloc(plain_len + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES + 1);
-    memset(c, '\0', plain_len);
+    c = calloc(plain_len + crypto_box_ZEROBYTES + crypto_box_BOXZEROBYTES + 1,
+		    sizeof(char));
+    sodium_memzero(c, plain_len + crypto_box_ZEROBYTES +
+		    crypto_box_BOXZEROBYTES + 1);
     unsigned char precomputation[crypto_box_BEFORENMBYTES];
     time_t starttime = time(NULL);
     crypto_box_beforenm(precomputation, pk, sk);
@@ -174,6 +176,6 @@ int main(int argc, char **argv)
 			    (double)(time(NULL) - starttime) / params.benchmark_count);
     }
     free(c);
-    free(plain);
+    sodium_free(plain);
     return 0;
 }

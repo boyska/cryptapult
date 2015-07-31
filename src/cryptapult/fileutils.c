@@ -3,6 +3,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <sodium.h>
+
 long file_readwhole(char* filename, unsigned char **buf) {
 	unsigned char *content;
 	long fsize;
@@ -16,16 +18,21 @@ long file_readwhole(char* filename, unsigned char **buf) {
 	fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
 
-	content = malloc(fsize + 1);
+	content = sodium_allocarray(fsize, sizeof(char));
 	if(content == NULL) {
 		fprintf(stderr, "Failure reading '%s' (not enough memory?)\n",
 				filename);
 		return -2;
 	}
-	fread(content, fsize, sizeof(char), f);
+	size_t rbytes = fread(content, sizeof(char), fsize, f);
+	if(rbytes != (size_t) fsize) {
+		fprintf(stderr, "Failure reading '%s' (%ld bytes read instead of %ld)\n",
+				filename, rbytes, fsize);
+		return -3;
+	}
 	fclose(f);
 
-	content[fsize] = 0;
+	sodium_mprotect_readonly(content);
 	*buf = content;
 	return fsize;
 }
