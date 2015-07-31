@@ -4,15 +4,16 @@
 
 static int is_zero( const unsigned char *data, int len )
 {
+	//ok this could be confusing; a return value of 0 means that *data is non-zero
+	//while a return value of 1 means that it is indeed all zero
 	int i;
-	int rc;
 
-	rc = 0;
 	for(i = 0; i < len; ++i) {
-		rc |= data[i];
+		if(data[i])
+			return 0;
 	}
 
-	return rc;
+	return 1;
 }
 
 int encrypt(unsigned char encrypted[],
@@ -43,7 +44,7 @@ int encrypt(unsigned char encrypted[],
 		return -1;
 	}
 
-	if( is_zero(temp_plain, crypto_box_BOXZEROBYTES) != 0 ) {
+	if(!is_zero(temp_plain, crypto_box_BOXZEROBYTES)) {
 		free(temp_plain);
 		free(temp_encrypted);
 		return -3;
