@@ -26,7 +26,7 @@ long file_readwhole(char* filename, unsigned char **buf) {
 	}
 	size_t rbytes = fread(content, sizeof(char), fsize, f);
 	if(rbytes != (size_t) fsize) {
-		fprintf(stderr, "Failure reading '%s' (%ld bytes read instead of %ld)\n",
+		fprintf(stderr, "Failure reading '%s' (%zu bytes read instead of %ld)\n",
 				filename, rbytes, fsize);
 		return -3;
 	}
