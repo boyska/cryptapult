@@ -34,7 +34,7 @@ int keygen(char* pk_fname, char* sk_fname)
 	return 0;
 }
 
-static int read_expected_size(char* fname, char* pk, unsigned long expected)
+static int read_expected_size(char* fname, unsigned char* pk, unsigned long expected)
 {
 	FILE *buf;
 	//TODO: check that size matches
@@ -56,7 +56,7 @@ static int read_expected_size(char* fname, char* pk, unsigned long expected)
 	return 0;
 }
 
-int pk_read(char* fname, char* pk)
+int pk_read(char* fname, unsigned char* pk)
 {
 	int ret = read_expected_size(fname, pk, crypto_box_PUBLICKEYBYTES);
 	if(ret == 2) {
@@ -65,7 +65,7 @@ int pk_read(char* fname, char* pk)
 	return ret;
 }
 
-int sk_read(char* fname, char* sk)
+int sk_read(char* fname, unsigned char* sk)
 {
 	int ret = read_expected_size(fname, sk, crypto_box_SECRETKEYBYTES);
 	if(ret == 2) {
