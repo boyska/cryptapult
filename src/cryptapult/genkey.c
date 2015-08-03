@@ -4,6 +4,8 @@
 
 #include <sodium.h>
 
+#include "keyfiles.h"
+
 struct parameters {
 	short int overwrite;
 	char *pk_fname;
@@ -57,38 +59,6 @@ int parse_opt(int argc, char** argv, struct parameters *opts) {
 	return 0;
 }
 
-int keygen(char* pk_fname, char* sk_fname)
-{
-	unsigned char pk[crypto_box_PUBLICKEYBYTES];
-	unsigned char sk[crypto_box_SECRETKEYBYTES];
-	crypto_box_keypair(pk, sk);
-	FILE* buf;
-	buf = fopen(pk_fname, "w");
-	if(buf == NULL) {
-		return 1;
-	}
-	if(fwrite(pk, sizeof(unsigned char), crypto_box_PUBLICKEYBYTES, buf)
-			!= crypto_box_PUBLICKEYBYTES) {
-		fclose(buf);
-		unlink(pk_fname);
-		return 2;
-	}
-	fclose(buf);
-
-	buf = fopen(sk_fname, "w");
-	if(buf == NULL) {
-		return 1;
-	}
-	if(fwrite(sk, sizeof(unsigned char), crypto_box_SECRETKEYBYTES, buf)
-			!= crypto_box_SECRETKEYBYTES) {
-		fclose(buf);
-		unlink(pk_fname);
-		unlink(sk_fname);
-		return 2;
-	}
-	fclose(buf);
-	return 0;
-}
 
 int main(int argc, char **argv)
 {

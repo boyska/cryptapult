@@ -13,7 +13,7 @@ crypta.o: crypta.c $(wildcard *.h)
 
 crypta$(ARCHSUFFIX): crypta.o fileutils.o cryptutils.o
 bench-genkey: bench-genkey.o
-genkey: genkey.o
+genkey: genkey.o keyfiles.o
 
 $(FINAL_BINARIES):
 	$(CC) $(CFLAGS) -L ../libsodium/src/libsodium/.libs/ $^ -o $@ -lsodium
