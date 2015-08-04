@@ -5,6 +5,10 @@
 
 #include <sodium.h>
 
+
+/* Read a whole file in a securely-allocated read-only buffer
+ * Returns the number of read bytes, if successful, or sth < 0 if not
+ * */
 long file_readwhole(char *filename, unsigned char **buf)
 {
     unsigned char *content;

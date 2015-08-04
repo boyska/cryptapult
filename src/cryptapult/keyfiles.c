@@ -34,6 +34,11 @@ int keygen(char *pk_fname, char *sk_fname)
     return 0;
 }
 
+/* Read whole file, expecting a certain size. pk should be at least expected bytes long
+ * returns 0 on success, non-zero otherwise
+ * 1 is "generic error"
+ * 2 if the file is not as big as expected
+ */
 static int read_expected_size(char *fname, unsigned char *pk,
                               unsigned long expected)
 {
@@ -58,6 +63,7 @@ static int read_expected_size(char *fname, unsigned char *pk,
     return 0;
 }
 
+/* Read a public key from a file. Refer to read_expected_size as for return values */
 int pk_read(char *fname, unsigned char *pk)
 {
     int ret = read_expected_size(fname, pk, crypto_box_PUBLICKEYBYTES);
@@ -68,6 +74,7 @@ int pk_read(char *fname, unsigned char *pk)
     return ret;
 }
 
+/* Read a secret key from a file. Refer to read_expected_size as for return values */
 int sk_read(char *fname, unsigned char *sk)
 {
     int ret = read_expected_size(fname, sk, crypto_box_SECRETKEYBYTES);
