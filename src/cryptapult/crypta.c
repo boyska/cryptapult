@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <getopt.h>
+#include <errno.h>
+
 #include "fileutils.h"
 
 #include <sodium.h>
@@ -23,6 +25,7 @@ struct parameters {
     int benchmark_count;
     char *filename;
     char *pk_fname;
+    char *out_name;
 };
 
 void print_usage(FILE * stream, int exit_code, char *prog)
@@ -34,7 +37,8 @@ void print_usage(FILE * stream, int exit_code, char *prog)
             "  --bench COUNT     Run the encryption COUNT times and\n"
             "                    print only benchmarks to stdout\n");
     fprintf(stream,
-            "  --ignore-tty      Output ciphertext even if stdout is a tty\n");
+            "  --ignore-tty      Output ciphertext even to a tty\n");
+    fprintf(stream, "  -o, --out FNAME   Output ciphertext to FNAME\n");
     exit(exit_code);
 }
 
@@ -46,12 +50,13 @@ int parse_opt(int argc, char **argv, struct parameters *opts)
         {"help", no_argument, NULL, 'h'},
         {"bench", required_argument, NULL, 0},
         {"ignore-tty", no_argument, NULL, 0},
+        {"out", required_argument, NULL, 'o'},
         {NULL, 0, NULL, 0}
     };
     char *program_name = argv[0];
     while (1) {
         option_index = 0;
-        c = getopt_long(argc, argv, "h", long_options, &option_index);
+        c = getopt_long(argc, argv, "ho:", long_options, &option_index);
         if (c == -1)
             break;
 
@@ -79,6 +84,10 @@ int parse_opt(int argc, char **argv, struct parameters *opts)
             break;
         case 'h':
             print_usage(stdout, 0, program_name);
+            break;
+        case 'o':
+            opts->out_name = calloc(strlen(optarg) + 1, sizeof(char));
+            strncpy(opts->out_name, optarg, strlen(optarg));
             break;
         case '?':
             break;
@@ -112,6 +121,7 @@ int main(int argc, char **argv)
         return 11;
     }
     unsigned char *c;
+    FILE *cipher_buffer = stdout;
     unsigned char *plain = NULL;
     long plain_len;
     struct parameters params;
@@ -119,10 +129,20 @@ int main(int argc, char **argv)
     params.benchmark_count = 1;
     params.check_tty = 1;
     params.pk_fname = NULL;
+    params.out_name = NULL;
+
 
     int parse_ret = parse_opt(argc, argv, &params);
     if (parse_ret) {
         print_usage(stderr, parse_ret, argv[0]);
+    }
+    if (params.out_name != NULL) {
+        cipher_buffer = fopen(params.out_name, "wb");
+        free(params.out_name);
+	if(cipher_buffer == NULL) {
+		fprintf(stderr, "Error opening output file (errno=%d)", errno);
+		return 1;
+	}
     }
     unsigned char pk[crypto_box_PUBLICKEYBYTES];
     if (pk_read(params.pk_fname, pk)) {
@@ -142,7 +162,7 @@ int main(int argc, char **argv)
     c = calloc(plain_len + crypto_box_SEALBYTES, sizeof(char));
     sodium_memzero(c, plain_len + crypto_box_SEALBYTES);
     if (!params.benchmark) {
-        if (params.check_tty && isatty(fileno(stdout))) {
+        if (params.check_tty && isatty(fileno(cipher_buffer))) {
             fprintf(stderr, "Output is a tty, refusing to write\n");
             free(c);
             sodium_free(plain);
@@ -154,7 +174,7 @@ int main(int argc, char **argv)
             return 1;
         }
         fwrite(c, sizeof(unsigned char), plain_len + crypto_box_SEALBYTES,
-               stdout);
+               cipher_buffer);
     } else {
         time_t starttime = time(NULL);
         for (int i = 0; i < params.benchmark_count; i++) {

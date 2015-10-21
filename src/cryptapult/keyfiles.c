@@ -70,6 +70,8 @@ int pk_read(char *fname, unsigned char *pk)
     if (ret == 2) {
         fprintf(stderr, "%s does not seem a public key (size mismatch)\n",
                 fname);
+    } else if (ret != 0) {
+	fprintf(stderr, "Error reading %s\n", fname);
     }
     return ret;
 }
