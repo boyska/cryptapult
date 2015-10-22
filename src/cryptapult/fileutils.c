@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 #include <sodium.h>
 
@@ -52,6 +54,15 @@ long file_readwhole(char *filename, unsigned char **buf)
     sodium_mprotect_readonly(content);
     *buf = content;
     return fsize;
+}
+
+long file_mmapwhole(char* filename, char** buf) {
+    int fd = open(filename, O_RDONLY);
+    struct stat filestat;
+    fstat(fd, &filestat);
+    char* address = (char*) mmap(0, filestat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    *buf = address;
+    return filestat.st_size;
 }
 
 /* vim: set et ts=4 sw=4 */

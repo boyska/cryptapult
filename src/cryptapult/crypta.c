@@ -5,6 +5,8 @@
 #include <time.h>
 #include <getopt.h>
 #include <errno.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 
 #include "fileutils.h"
 
@@ -121,7 +123,7 @@ int main(int argc, char **argv)
         return 11;
     }
     unsigned char *c;
-    FILE *cipher_buffer = stdout;
+    int cipher_fd = fileno(stdout);
     unsigned char *plain = NULL;
     long plain_len;
     struct parameters params;
@@ -136,36 +138,44 @@ int main(int argc, char **argv)
     if (parse_ret) {
         print_usage(stderr, parse_ret, argv[0]);
     }
-    if (params.out_name != NULL) {
-        cipher_buffer = fopen(params.out_name, "wb");
-        free(params.out_name);
-	if(cipher_buffer == NULL) {
-		fprintf(stderr, "Error opening output file (errno=%d)", errno);
-		return 1;
-	}
-    }
     unsigned char pk[crypto_box_PUBLICKEYBYTES];
     if (pk_read(params.pk_fname, pk)) {
         fprintf(stderr, "Error reading public key\n");
         return 1;
     }
 
-    plain_len = file_readwhole(params.filename, &plain);
+    plain_len = file_mmapwhole(params.filename, &plain);
     if (plain_len < 0 || !plain) {
         if (plain) {
-            sodium_free(plain);
+            munmap(plain, plain_len);
         }
         fprintf(stderr, "Error reading file\n");
         return 1;
     }
 
-    c = calloc(plain_len + crypto_box_SEALBYTES, sizeof(char));
-    sodium_memzero(c, plain_len + crypto_box_SEALBYTES);
     if (!params.benchmark) {
-        if (params.check_tty && isatty(fileno(cipher_buffer))) {
+        if (params.out_name != NULL) {
+            cipher_fd = open(params.out_name, O_RDWR | O_CREAT | O_TRUNC);
+            free(params.out_name);
+            if(cipher_fd == -1) {
+                fprintf(stderr, "Error opening output file (%s)", strerror(errno));
+                return 1;
+            }
+        }
+        lseek(cipher_fd, plain_len + crypto_box_SEALBYTES - 1, SEEK_SET);
+        write(cipher_fd, "", 1);
+        lseek(cipher_fd, 0, SEEK_SET);
+        c = mmap(0, plain_len + crypto_box_SEALBYTES, PROT_READ | PROT_WRITE, MAP_SHARED, cipher_fd, 0);
+        if(c == MAP_FAILED) {
+            fprintf(stderr, "Error opening output buffer: %s\n", strerror(errno));
+            return 1;
+        }
+        memset(c, '\0', plain_len + crypto_box_SEALBYTES);
+
+        if (params.check_tty && isatty(cipher_fd)) {
             fprintf(stderr, "Output is a tty, refusing to write\n");
             free(c);
-            sodium_free(plain);
+            munmap(plain, plain_len);
             return 10;
         }
         const int r = crypto_box_seal(c, plain, plain_len, pk);
@@ -173,18 +183,18 @@ int main(int argc, char **argv)
             fprintf(stderr, "Error %d occured\n", r);
             return 1;
         }
-        fwrite(c, sizeof(unsigned char), plain_len + crypto_box_SEALBYTES,
-               cipher_buffer);
+        munmap(c, plain_len + crypto_box_SEALBYTES);
     } else {
         time_t starttime = time(NULL);
+        c = calloc(plain_len + crypto_box_SEALBYTES, sizeof(char));
         for (int i = 0; i < params.benchmark_count; i++) {
             crypto_box_seal(c, plain, plain_len, pk);
         }
+        free(c);
         fprintf(stderr, "Time per cycle: %.3f\n",
                 (double) (time(NULL) -
                           starttime) / params.benchmark_count);
     }
-    free(c);
-    sodium_free(plain);
+    munmap(plain, plain_len);
     return 0;
 }

@@ -2,6 +2,7 @@
 #define FILEUTILS_H
 
 long file_readwhole(char *filename, unsigned char **);
+long file_mmapwhole(char *filename, unsigned char **);
 void randombytes(unsigned char[], unsigned long long);
 
 #endif /* end of include guard: FILEUTILS_H */
