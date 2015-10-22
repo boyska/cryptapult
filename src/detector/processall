@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# L'approccio è il seguente: ogni file $f trovato (che corrisponda al pattern)
+# per cui non esista un file di lock (capire come farlo su vfat scemo) va
+# cifrato e poi rimosso.
+# Quindi basta lanciare questo coso a loop/cron.
+# Se abiliti il locking, puoi far girare anche due di questi cosi in contemporanea
+# Mentre gira un ciclo, non c'è modo di vedere se il file esiste ancora
+
+set -u
+set -e
+
+encrypt_cmd=${encrypt_cmd:-catapult-encrypt}
+pubkey=${pubkey:-/key.pub}
+destbase=${destbase%/:-/mnt/internal}
+bb=${bb:-/mnt/sd/busybox}
+locking=${locking:-0}
+loop=${loop:-1}
+flock=${flock:-"$bb flock"}
+[[ -f /etc/catapult/process ]] && . /etc/catapult/process
+
+destname() {
+	echo "$destbase/${1#$2}"
+}
+
+encryptall() {
+	readonly base=${1%/}
+	shift 1
+
+	find $base/ -mindepth 2 -xdev -type f -size +50 -name '*.*' | while read fname; do
+		[[ -f "$fname" ]] || continue
+		destpath=$(destname "$fname" "$base")
+		[[ -f "${destpath}.complete" ]] && continue
+		mkdir -p "${destpath%/*}"  # dirname
+		# note: busybox flock handles -c arguments differently than util-linux one
+		if [[ $locking -eq 1 ]]; then
+			set +e
+			$flock -nx "$fname" -c $encrypt_cmd "$fname" "$pubkey" -o "$destpath"
+			ret=$?
+			set -e
+			if [[ $ret -eq 1 ]]; then
+				echo "Someone is locking the file, skipping"
+				continue
+			elif [[ $ret -eq 0 ]]; then
+				echo "Encrypted $fname to $destpath"
+				touch "${destpath}.complete"
+			else
+				echo "Error encrypting ($ret)"
+			fi
+		else # no locking
+			$encrypt_cmd "$fname" "$pubkey" -o "$destpath"
+			ret=$?
+			if [[ $ret -eq 0 ]]; then
+				echo "Encrypted $fname to $destpath"
+				touch "${destpath}.complete"
+			else
+				echo "Error encrypting ($ret)"
+			fi
+		fi
+	done
+}
+
+if [[ $loop -eq 0 ]]; then
+	encryptall $1
+else
+	while true; do
+		encryptall $1
+		sleep 3
+	done
+fi
