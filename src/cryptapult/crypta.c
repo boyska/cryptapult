@@ -12,7 +12,6 @@
 
 #include <sodium.h>
 
-#include "cryptutils.h"
 #include "keyfiles.h"
 
 

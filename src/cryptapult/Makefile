@@ -11,7 +11,7 @@ crypta.o: crypta.c $(wildcard *.h)
 	$(CC) $(CFLAGS) $< -c -o $@
 
 
-crypta$(ARCHSUFFIX): crypta.o fileutils.o cryptutils.o keyfiles.o
+crypta$(ARCHSUFFIX): crypta.o fileutils.o keyfiles.o
 bench-genkey: bench-genkey.o
 genkey: genkey.o keyfiles.o
 
