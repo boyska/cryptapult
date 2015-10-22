@@ -22,7 +22,7 @@ int fileno(FILE *);
 
 
 struct parameters {
-    short int benchmark, check_tty;
+    short int benchmark;
     int benchmark_count;
     char *filename;
     char *pk_fname;
@@ -37,8 +37,6 @@ void print_usage(FILE * stream, int exit_code, char *prog)
     fprintf(stream,
             "  --bench COUNT     Run the encryption COUNT times and\n"
             "                    print only benchmarks to stdout\n");
-    fprintf(stream,
-            "  --ignore-tty      Output ciphertext even to a tty\n");
     fprintf(stream, "  -o, --out FNAME   Output ciphertext to FNAME\n");
     exit(exit_code);
 }
@@ -50,7 +48,6 @@ int parse_opt(int argc, char **argv, struct parameters *opts)
     struct option long_options[] = {
         {"help", no_argument, NULL, 'h'},
         {"bench", required_argument, NULL, 0},
-        {"ignore-tty", no_argument, NULL, 0},
         {"out", required_argument, NULL, 'o'},
         {NULL, 0, NULL, 0}
     };
@@ -62,9 +59,6 @@ int parse_opt(int argc, char **argv, struct parameters *opts)
             break;
 
         switch (c) {
-        case 'T':
-            opts->check_tty = 0;
-            break;
         case 0:                /* long option without a short arg */
             if (strcmp("bench", long_options[option_index].name) == 0) {
                 opts->benchmark = 1;
@@ -78,9 +72,6 @@ int parse_opt(int argc, char **argv, struct parameters *opts)
                             opts->benchmark_count);
                     return 2;
                 }
-            }
-            if (strcmp("ignore-tty", long_options[option_index].name) == 0) {
-                opts->check_tty = 0;
             }
             break;
         case 'h':
@@ -98,6 +89,14 @@ int parse_opt(int argc, char **argv, struct parameters *opts)
     }
     if (argc - optind != 2) {
         fprintf(stderr, "Wrong number of arguments\n");
+        return 2;
+    }
+    if(!(opts->out_name || opts->benchmark)) {
+        fprintf(stderr, "Either --bench or --out is required\n");
+        return 2;
+    }
+    if(opts->out_name && opts->benchmark) {
+        fprintf(stderr, "--bench and --out are mutually exclusive\n");
         return 2;
     }
     if (optind < argc) {
@@ -128,7 +127,6 @@ int main(int argc, char **argv)
     struct parameters params;
     params.benchmark = 0;
     params.benchmark_count = 1;
-    params.check_tty = 1;
     params.pk_fname = NULL;
     params.out_name = NULL;
 
@@ -158,6 +156,7 @@ int main(int argc, char **argv)
             free(params.out_name);
             if(cipher_fd == -1) {
                 fprintf(stderr, "Error opening output file (%s)", strerror(errno));
+                munmap(plain, plain_len);
                 return 1;
             }
         }
@@ -167,22 +166,18 @@ int main(int argc, char **argv)
         c = mmap(0, plain_len + crypto_box_SEALBYTES, PROT_READ | PROT_WRITE, MAP_SHARED, cipher_fd, 0);
         if(c == MAP_FAILED) {
             fprintf(stderr, "Error opening output buffer: %s\n", strerror(errno));
+            munmap(plain, plain_len);
             return 1;
         }
         memset(c, '\0', plain_len + crypto_box_SEALBYTES);
 
-        if (params.check_tty && isatty(cipher_fd)) {
-            fprintf(stderr, "Output is a tty, refusing to write\n");
-            free(c);
-            munmap(plain, plain_len);
-            return 10;
-        }
         const int r = crypto_box_seal(c, plain, plain_len, pk);
+        munmap(c, plain_len + crypto_box_SEALBYTES);
         if (r != 0) {
             fprintf(stderr, "Error %d occured\n", r);
+            munmap(plain, plain_len);
             return 1;
         }
-        munmap(c, plain_len + crypto_box_SEALBYTES);
     } else {
         time_t starttime = time(NULL);
         c = calloc(plain_len + crypto_box_SEALBYTES, sizeof(char));
@@ -194,6 +189,5 @@ int main(int argc, char **argv)
                 (double) (time(NULL) -
                           starttime) / params.benchmark_count);
     }
-    munmap(plain, plain_len);
     return 0;
 }
