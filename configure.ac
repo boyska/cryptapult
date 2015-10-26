@@ -3,6 +3,7 @@
 
 AC_PREREQ([2.69])
 AC_INIT([cryptapult], [0.1], [piuttosto@logorroici.org])
+AM_INIT_AUTOMAKE([-Wall -Werror])
 AC_CONFIG_SRCDIR([src/cryptapult/keyfiles.h])
 # AC_CONFIG_HEADERS([config.h])
 
@@ -20,8 +21,8 @@ AC_CHECK_HEADERS([fcntl.h stdlib.h string.h unistd.h sodium.h])
 AC_TYPE_SIZE_T
 
 # Checks for library functions.
-AC_FUNC_MALLOC
-AC_CHECK_FUNCS([clock_gettime memset])
+AC_FUNC_MMAP
+AC_CHECK_FUNCS([clock_gettime memset munmap strerror])
 
-AC_CONFIG_FILES([src/cryptapult/config.mk])
+AC_CONFIG_FILES([src/cryptapult/Makefile])
 AC_OUTPUT
