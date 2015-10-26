@@ -6,6 +6,7 @@
 #include <getopt.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 
 #include "fileutils.h"
@@ -152,7 +153,7 @@ int main(int argc, char **argv)
 
     if (!params.benchmark) {
         if (params.out_name != NULL) {
-            cipher_fd = open(params.out_name, O_RDWR | O_CREAT | O_TRUNC);
+            cipher_fd = open(params.out_name, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR);
             free(params.out_name);
             if(cipher_fd == -1) {
                 fprintf(stderr, "Error opening output file (%s)", strerror(errno));
