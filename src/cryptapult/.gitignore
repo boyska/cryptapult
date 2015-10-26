@@ -1,2 +1,6 @@
 genkey
 bench-genkey
+cryptapult
+.deps/
+Makefile
+Makefile.in

@@ -2,3 +2,13 @@
 crypta-*
 .*.sw[po]
 *~
+/compile
+/configure
+/depcomp
+/install-sh
+/aclocal.m4
+/autom4te.cache/
+/config.status
+/config.log
+/missing
+/libsodium/
