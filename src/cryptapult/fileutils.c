@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <errno.h>
+#include <string.h>
 
 #include <sodium.h>
 
@@ -58,6 +60,10 @@ long file_readwhole(char *filename, unsigned char **buf)
 
 long file_mmapwhole(char* filename, char** buf) {
     int fd = open(filename, O_RDONLY);
+    if(fd == -1) {
+	    fprintf(stderr, "Failure reading '%s' (%s)\n", filename, strerror(errno));
+	    return -1;
+    }
     struct stat filestat;
     fstat(fd, &filestat);
     char* address = (char*) mmap(0, filestat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
