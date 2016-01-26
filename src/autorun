@@ -1,0 +1,9 @@
+#!/bin/bash
+
+rundir=${0%/*}
+cp ${rundir}/pkg/usr/bin/* /usr/bin/
+mkdir -p /etc/catapult/
+[[ -f ${rundir}/process.conf  ]] && cp ${rundir}/process.conf /etc/catapult/process
+[[ -f ${rundir}/key.pub ]] || exit 2
+
+pubkey="${rundir}/key.pub" loop=1 exec ${rundir}/processall ${rundir}/

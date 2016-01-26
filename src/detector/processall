@@ -7,24 +7,32 @@
 # Se abiliti il locking, puoi far girare anche due di questi cosi in contemporanea
 # Mentre gira un ciclo, non c'è modo di vedere se il file esiste ancora
 
-set -u
 set -e
 
 encrypt_cmd=${encrypt_cmd:-catapult-encrypt}
 pubkey=${pubkey:-/key.pub}
-destbase=${destbase%/:-/mnt/internal}
+if [[ ! -r "$pubkey" ]]; then
+	echo "Error: no public key found" >&2
+fi
+if [[ -z "$destbase" ]]; then
+	destbase=/mnt/internal/enc/
+else
+	destbase=${destbase%/}
+fi
 bb=${bb:-/mnt/sd/busybox}
 locking=${locking:-0}
 loop=${loop:-1}
 flock=${flock:-"$bb flock"}
 [[ -f /etc/catapult/process ]] && . /etc/catapult/process
 
+set -u
+
 destname() {
 	echo "$destbase/${1#$2}"
 }
 
 encryptall() {
-	readonly base=${1%/}
+	base=${1%/}
 	shift 1
 
 	find $base/ -mindepth 2 -xdev -type f -size +50 -name '*.*' | while read fname; do
